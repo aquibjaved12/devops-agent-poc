@@ -1,0 +1,10 @@
+# Terraform state (contains secrets)
+terraform.tfstate
+terraform.tfstate.backup
+.terraform/
+*.tfvars
+
+# OS
+.DS_Store
+*.pem
+*.key
