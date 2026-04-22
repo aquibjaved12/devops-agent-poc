@@ -1,3 +1,12 @@
+terraform {
+  backend "s3" {
+    bucket = "devopsagent-poc-tfstate"
+    key    = "poc/terraform.tfstate"
+    region = "us-east-1"
+  }
+}
+
+
 provider "aws" {
   region = var.region
 }
@@ -21,6 +30,7 @@ module "sg" {
 
 module "iam" {
   source = "./IAM"
+  github_actions_username = var.github_actions_username
 }
 
 module "ec2" {
