@@ -1,3 +1,4 @@
+// Version: 1.1 — deployed via GitHub Actions + SSM + S3
 const http = require('http');
 const os   = require('os');
 
