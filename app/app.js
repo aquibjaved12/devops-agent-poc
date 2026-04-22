@@ -504,6 +504,14 @@ const server = http.createServer((req, res) => {
     res.end(`Simulated error #${stats.error.count} generated`);
   }
 
+  // Add a new buggy endpoint that causes errors
+  else if (req.url === "/bug") {
+    stats.error.count++;
+    addLog('ERROR', `Bug endpoint hit — simulating post-deployment error (build #${stats.error.count})`);
+    res.writeHead(500, { 'Content-Type': 'text/plain' });
+    res.end(`Post-deployment bug detected — error #${stats.error.count}`);
+  }
+
   // ── Slow response simulation ──
   else if (req.url === '/slow') {
     stats.slow.count++;
