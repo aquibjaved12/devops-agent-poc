@@ -29,17 +29,17 @@ module "sg" {
 }
 
 module "iam" {
-  source = "./IAM"
+  source                  = "./IAM"
   github_actions_username = var.github_actions_username
 }
 
 module "ec2" {
   source = "./ec2"
 
-  ami_id            = var.ami_id
-  instance_type     = var.instance_type
-  subnet_id         = module.vpc.public_subnet_id
-  security_group_id = module.sg.sg_id
+  ami_id               = var.ami_id
+  instance_type        = var.instance_type
+  subnet_id            = module.vpc.public_subnet_id
+  security_group_id    = module.sg.sg_id
   iam_instance_profile = module.iam.instance_profile
 }
 
@@ -53,6 +53,6 @@ module "cloudwatch" {
 module "devops_agent" {
   source = "./devops-agent"
 
-#   region            = var.region
-  agent_space_name  = "devops-agent-poc"
+  #   region            = var.region
+  agent_space_name = "devops-agent-poc"
 }

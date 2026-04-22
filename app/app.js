@@ -1,14 +1,14 @@
 const http = require('http');
 const os   = require('os');
 
-// ── Deployment metadata (injected via CI/CD environment variables) ──
+//  Deployment metadata (injected via CI/CD environment variables) 
 const APP_VERSION    = process.env.APP_VERSION    || 'v1.0.0';
 const DEPLOYED_BY    = process.env.DEPLOYED_BY    || 'manual';
 const DEPLOYED_AT    = process.env.DEPLOYED_AT    || new Date().toISOString();
 const GIT_COMMIT     = process.env.GIT_COMMIT     || 'local';
 const ENVIRONMENT    = process.env.ENVIRONMENT    || 'dev';
 
-// ── In-memory state ──────────────────────────────────────────────────
+// In-memory state 
 const stats = {
   cpu:   { count: 0, lastTriggered: null },
   error: { count: 0, lastTriggered: null },
@@ -35,7 +35,7 @@ function addLog(level, message) {
   }
 }
 
-// ── HTML Dashboard ───────────────────────────────────────────────────
+//  HTML Dashboard 
 function getHTML() {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -444,12 +444,12 @@ function getHTML() {
 </html>`;
 }
 
-// ── HTTP Server ──────────────────────────────────────────────────────
+//  HTTP Server 
 const server = http.createServer((req, res) => {
   stats.total++;
   addLog('INFO', `Request: ${req.method} ${req.url}`);
 
-  // ── Dashboard UI ──
+  //  Dashboard UI 
   if (req.url === '/') {
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.end(getHTML());

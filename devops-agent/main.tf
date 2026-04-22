@@ -60,7 +60,7 @@
 # # AGENT SPACE
 # # ----------------------------
 resource "awscc_devopsagent_agent_space" "agent_space" {
-#   depends_on = [time_sleep.wait_iam]
+  #   depends_on = [time_sleep.wait_iam]
 
   name = var.agent_space_name
 
