@@ -5,10 +5,10 @@ on:
     branches:
       - main
 
-# ── What changed? Drive selective jobs ──────────────────────────────
+#  What changed? Drive selective jobs 
 jobs:
 
-  # ── Job 1: Detect which files changed ─────────────────────────────
+  #  Job 1: Detect which files changed 
   detect-changes:
     name: Detect Changes
     runs-on: ubuntu-latest
@@ -30,7 +30,7 @@ jobs:
             app:
               - 'app/app.js'
 
-  # ── Job 2: Terraform (runs if .tf or userdata.sh changed) ──────────
+  #  Job 2: Terraform (runs if .tf or userdata.sh changed) 
   terraform-infra:
     name: Terraform — Infrastructure
     runs-on: ubuntu-latest
@@ -75,7 +75,7 @@ jobs:
       - name: Show EC2 IP
         run: echo "✅ EC2 Public IP -> ${{ steps.tf_outputs.outputs.ec2_ip }}"
 
-  # ── Job 3: Deploy App (runs if app.js changed) ─────────────────────
+  # Job 3: Deploy App (runs if app.js changed) 
   deploy-app:
     name: Deploy App — app.js
     runs-on: ubuntu-latest
@@ -94,43 +94,43 @@ jobs:
       - name: Set deployment metadata
         id: meta
         run: |
-          echo "version=v1.0.${{ github.run_number }}"     >> $GITHUB_OUTPUT
-          echo "commit=${{ github.sha }}"                  >> $GITHUB_OUTPUT
+          echo "version=v1.0.${{ github.run_number }}"         >> $GITHUB_OUTPUT
           echo "deployed_at=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
-          echo "deployed_by=github-actions"                >> $GITHUB_OUTPUT
 
-      - name: Deploy app.js via SSM
+      # ── Step 1: Upload app.js to S3 ──────────────────────────────
+      - name: Upload app.js to S3
         run: |
-          aws ssm send-command \
+          aws s3 cp app/app.js \
+            s3://devopsagent-poc-tfstate/deployments/app.js \
+            --region us-east-1
+          echo "✅ app.js uploaded to S3"
+
+      # ── Step 2: EC2 pulls from S3 via SSM ────────────────────────
+      - name: Deploy via SSM
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
             --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
             --document-name "AWS-RunShellScript" \
-            --parameters 'commands=[
+            --parameters commands='[
+              "aws s3 cp s3://devopsagent-poc-tfstate/deployments/app.js /tmp/app_new.js --region us-east-1",
               "cp /app/app.js /app/app.js.bak",
-              "cat > /app/app.js << APPEOF",
-              "'"$(cat app/app.js | sed 's/\"/\\\"/g')"'",
-              "APPEOF",
-              "export APP_VERSION=\"v1.0.${{ github.run_number }}\"",
-              "export DEPLOYED_BY=\"github-actions\"",
-              "export DEPLOYED_AT=\"${{ steps.meta.outputs.deployed_at }}\"",
-              "export GIT_COMMIT=\"${{ github.sha }}\"",
-              "export ENVIRONMENT=\"dev\"",
+              "cp /tmp/app_new.js /app/app.js",
               "pkill -f \"node /app/app.js\" || true",
               "sleep 2",
-              "nohup env APP_VERSION=\"v1.0.${{ github.run_number }}\" DEPLOYED_BY=\"github-actions\" DEPLOYED_AT=\"${{ steps.meta.outputs.deployed_at }}\" GIT_COMMIT=\"${{ github.sha }}\" ENVIRONMENT=\"dev\" node /app/app.js > /var/log/app.log 2>&1 &",
+              "export APP_VERSION=\"v1.0.${{ github.run_number }}\" && export DEPLOYED_BY=\"github-actions\" && export DEPLOYED_AT=\"${{ steps.meta.outputs.deployed_at }}\" && export GIT_COMMIT=\"${{ github.sha }}\" && export ENVIRONMENT=\"dev\" && nohup node /app/app.js > /var/log/app.log 2>&1 &",
               "sleep 3",
               "curl -s http://localhost:3000/health"
             ]' \
             --region us-east-1 \
-            --output text \
-            --query "Command.CommandId" > /tmp/ssm_command_id.txt
+            --query "Command.CommandId" \
+            --output text)
 
-          echo "SSM Command ID: $(cat /tmp/ssm_command_id.txt)"
+          echo "COMMAND_ID=$COMMAND_ID" >> $GITHUB_ENV
+          echo "SSM Command ID: $COMMAND_ID"
 
-      - name: Wait for SSM command to complete
+      # ── Step 3: Wait for SSM ──────────────────────────────────────
+      - name: Wait for SSM command
         run: |
-          COMMAND_ID=$(cat /tmp/ssm_command_id.txt)
-          echo "Waiting for command $COMMAND_ID to complete..."
-
           for i in {1..12}; do
             STATUS=$(aws ssm get-command-invocation \
               --command-id "$COMMAND_ID" \
@@ -143,9 +143,15 @@ jobs:
 
             if [ "$STATUS" = "Success" ]; then
               echo "✅ Deployment succeeded"
+              aws ssm get-command-invocation \
+                --command-id "$COMMAND_ID" \
+                --instance-id "${{ secrets.EC2_INSTANCE_ID }}" \
+                --region us-east-1 \
+                --query "StandardOutputContent" \
+                --output text
               break
             elif [ "$STATUS" = "Failed" ] || [ "$STATUS" = "TimedOut" ]; then
-              echo "❌ Deployment failed with status: $STATUS"
+              echo "❌ Deployment failed"
               aws ssm get-command-invocation \
                 --command-id "$COMMAND_ID" \
                 --instance-id "${{ secrets.EC2_INSTANCE_ID }}" \
@@ -157,36 +163,35 @@ jobs:
             sleep 10
           done
 
-      - name: Verify deployment via health check
+      # ── Step 4: Health check ──────────────────────────────────────
+      - name: Health check
         run: |
-          EC2_IP="${{ secrets.EC2_PUBLIC_IP }}"
-          echo "Checking http://${EC2_IP}:3000/health"
-
+          echo "Checking http://${{ secrets.EC2_PUBLIC_IP }}:3000/health"
           for i in {1..5}; do
-            RESPONSE=$(curl -s --max-time 10 http://${EC2_IP}:3000/health || echo "failed")
-            echo "Health check attempt $i: $RESPONSE"
-
+            RESPONSE=$(curl -s --max-time 10 \
+              http://${{ secrets.EC2_PUBLIC_IP }}:3000/health || echo "failed")
+            echo "Attempt $i: $RESPONSE"
             if echo "$RESPONSE" | grep -q "healthy"; then
-              VERSION=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('version','unknown'))")
-              echo "✅ App is healthy — version: $VERSION"
-              break
+              VERSION=$(echo $RESPONSE | python3 -c \
+                "import sys,json; print(json.load(sys.stdin).get('version','?'))")
+              echo "✅ App healthy — version: $VERSION"
+              exit 0
             fi
             sleep 5
           done
+          echo "⚠️ Health check inconclusive"
 
-      - name: Print deployment summary
+      # ── Step 5: Summary ───────────────────────────────────────────
+      - name: Deployment summary
         run: |
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "  ✅ DEPLOYMENT COMPLETE"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "  Version    : v1.0.${{ github.run_number }}"
-          echo "  Commit     : ${{ github.sha }}"
-          echo "  Deployed At: ${{ steps.meta.outputs.deployed_at }}"
-          echo "  Deployed By: github-actions"
-          echo "  Instance   : ${{ secrets.EC2_INSTANCE_ID }}"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "  Version : v1.0.${{ github.run_number }}"
+          echo "  Commit  : ${{ github.sha }}"
+          echo "  Time    : ${{ steps.meta.outputs.deployed_at }}"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-  # ── Job 4: Verify (always runs after both jobs) ────────────────────
+  #  Job 4: Verify (always runs after both jobs) 
   verify:
     name: Verify — Final Health Check
     runs-on: ubuntu-latest
