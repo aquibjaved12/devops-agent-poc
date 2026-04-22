@@ -62,10 +62,7 @@ jobs:
         run: terraform validate
 
       - name: Terraform Plan
-        run: |
-          terraform plan \
-            -var="ami_id=${{ secrets.TF_VAR_AMI_ID }}" \
-            -out=tfplan
+        run:  terraform plan -out=tfplan
 
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
