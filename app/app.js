@@ -291,7 +291,7 @@ function getHTML() {
       <h2>⚡ Incident Triggers</h2>
       <div class="btn-grid">
         <button class="btn btn-cpu"   onclick="trigger('/cpu',   this)" id="btn-cpu">
-          🔥 Trigger CPU Spike <small style="opacity:0.8">(10s blocking loop)</small>
+          🔥 Trigger CPU Spike <small style="opacity:0.8">(120s sustained loop)</small>
         </button>
         <button class="btn btn-error" onclick="trigger('/error', this)" id="btn-error">
           ❌ Trigger Error <small style="opacity:0.8">(HTTP 500)</small>
@@ -385,7 +385,7 @@ function getHTML() {
         .finally(() => {
           btn.disabled = false;
           const icons = { '/cpu': '🔥', '/error': '❌', '/slow': '🐢' };
-          const smallText = { '/cpu': '(10s blocking loop)', '/error': '(HTTP 500)', '/slow': '(10s delay)' };
+          const smallText = { '/cpu': '(120s sustained loop)', '/error': '(HTTP 500)', '/slow': '(10s delay)' };
           const names = { '/cpu': 'Trigger CPU Spike', '/error': 'Trigger Error', '/slow': 'Trigger Slow Response' };
           btn.innerHTML = icons[path] + ' ' + names[path] + ' <small style="opacity:0.8">' + smallText[path] + '</small>';
         });
@@ -481,17 +481,35 @@ const server = http.createServer((req, res) => {
   }
 
   // ── CPU spike ──
-  else if (req.url === '/cpu') {
+    else if (req.url === '/cpu') {
     stats.cpu.count++;
     stats.cpu.lastTriggered = new Date().toISOString();
-    addLog('WARN', `CPU spike triggered — starting 10s blocking loop (trigger #${stats.cpu.count})`);
+    addLog('WARN', `CPU spike triggered — running high CPU load for 120s (trigger #${stats.cpu.count})`);
 
+    // Run 120s of sustained CPU load — enough for CloudWatch to capture clearly
+    const duration = 120000; // 120 seconds
     const start = Date.now();
-    while (Date.now() - start < 10000) {}
 
-    addLog('WARN', 'CPU spike completed — loop finished');
+    // Use setInterval to keep event loop alive + maintain sustained CPU
+    let elapsed = 0;
+    const interval = setInterval(() => {
+      elapsed = Date.now() - start;
+
+      // Burn CPU in each interval tick
+      const burn = Date.now();
+      while (Date.now() - burn < 900) {} // burn 900ms per tick
+
+      addLog('WARN', `CPU burning — ${Math.floor(elapsed / 1000)}s / 120s elapsed`);
+
+      if (elapsed >= duration) {
+        clearInterval(interval);
+        addLog('WARN', `CPU spike #${stats.cpu.count} completed — 120s sustained load done`);
+      }
+    }, 1000); // tick every second
+
+    // Respond immediately so browser doesn't hang
     res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end(`CPU spike #${stats.cpu.count} completed (10s blocking loop)`);
+    res.end(`CPU spike #${stats.cpu.count} started — 120s sustained load running in background`);
   }
 
   // ── Error simulation ──
