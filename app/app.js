@@ -269,7 +269,7 @@ function getHTML() {
   <!-- Header -->
   <div class="header">
     <div>
-      <h1>🚀 DevOps Agent POC <span class="env-tag">${ENVIRONMENT}</span></h1>
+      <h1>🚀 DevOps Agent POC - Demo <span class="env-tag">${ENVIRONMENT}</span></h1>
       <p>Live incident simulation dashboard — AWS DevOps Agent integration demo</p>
       <p style="margin-top:6px; font-size:12px; color:#64748b;">
         Instance: <strong style="color:#94a3b8">${os.hostname()}</strong> &nbsp;|&nbsp;
