@@ -47,3 +47,31 @@ resource "aws_cloudwatch_metric_alarm" "node_process_cpu_alarm" {
     process_name = "node"
   }
 }
+
+# ── NEW: App Error Log Metric Filter ─────────────────────────────────
+resource "aws_cloudwatch_log_metric_filter" "error_filter" {
+  name           = "app-error-count"
+  pattern        = "ERROR"
+  log_group_name = var.log_group_name
+
+  metric_transformation {
+    name      = "AppErrorCount"
+    namespace = "DevOpsAgent/EC2"
+    value     = "1"
+    unit      = "Count"
+  }
+}
+
+# ── NEW: Error Rate Alarm ─────────────────────────────────────────────
+resource "aws_cloudwatch_metric_alarm" "error_alarm" {
+  alarm_name          = "high-error-rate"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "AppErrorCount"
+  namespace           = "DevOpsAgent/EC2"
+  period              = 60
+  statistic           = "Sum"
+  threshold           = 3
+  alarm_description   = "App error rate exceeded 3 errors per minute"
+  treat_missing_data  = "notBreaching"
+}

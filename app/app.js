@@ -299,6 +299,10 @@ function getHTML() {
         <button class="btn btn-slow"  onclick="trigger('/slow',  this)" id="btn-slow">
           🐢 Trigger Slow Response <small style="opacity:0.8">(10s delay)</small>
         </button>
+        <button class="btn" style="background:#7f1d1d; color:#fff;"
+                onclick="trigger('/crash', this)" id="btn-crash">
+          💥 Simulate Deployment Bug <small style="opacity:0.8">(crashes app)</small>
+        </button>
       </div>
       <div class="status-box" id="status">
         <span class="status-ok">✅ System healthy — ready to trigger incidents</span>
@@ -384,12 +388,26 @@ function getHTML() {
         })
         .finally(() => {
           btn.disabled = false;
-          const icons = { '/cpu': '🔥', '/error': '❌', '/slow': '🐢' };
-          const smallText = { '/cpu': '(120s sustained loop)', '/error': '(HTTP 500)', '/slow': '(10s delay)' };
-          const names = { '/cpu': 'Trigger CPU Spike', '/error': 'Trigger Error', '/slow': 'Trigger Slow Response' };
+          const icons = {
+            '/cpu':   '🔥',
+            '/error': '❌',
+            '/slow':  '🐢',
+            '/crash': '💥'
+          };
+          const smallText = {
+            '/cpu':   '(120s sustained loop)',
+            '/error': '(HTTP 500)',
+            '/slow':  '(10s delay)',
+            '/crash': '(crashes app)'
+          };
+          const names = {
+            '/cpu':   'Trigger CPU Spike',
+            '/error': 'Trigger Error',
+            '/slow':  'Trigger Slow Response',
+            '/crash': 'Simulate Deployment Bug'
+          };
           btn.innerHTML = icons[path] + ' ' + names[path] + ' <small style="opacity:0.8">' + smallText[path] + '</small>';
         });
-    }
 
     // ── Fetch and update stats ───────────────────────────────────
     function refreshStats() {
@@ -541,6 +559,25 @@ const server = http.createServer((req, res) => {
       res.writeHead(200, { 'Content-Type': 'text/plain' });
       res.end(`Slow response #${stats.slow.count} done (10s delay)`);
     }, 10000);
+  }
+
+  // ── Crash simulation ──
+  else if (req.url === '/crash') {
+    stats.error.count++;
+    stats.error.lastTriggered = new Date().toISOString();
+    addLog('ERROR', `💥 Fatal error triggered — uncaught exception (crash #${stats.error.count})`);
+
+    // Simulate uncaught exception after response
+    res.writeHead(500, { 'Content-Type': 'text/plain' });
+    res.end(`Deployment bug #${stats.error.count} — fatal error!`);
+
+    // Throw error after 1 second — simulates bad deployment
+    setTimeout(() => {
+      throw new Error(
+        'DEPLOYMENT BUG: Uncaught exception — ' +
+        'TypeError: Cannot read properties of undefined'
+      );
+    }, 1000);
   }
 
   // ── 404 ──
