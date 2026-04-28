@@ -408,6 +408,7 @@ function getHTML() {
           };
           btn.innerHTML = icons[path] + ' ' + names[path] + ' <small style="opacity:0.8">' + smallText[path] + '</small>';
         });
+      }
 
     // ── Fetch and update stats ───────────────────────────────────
     function refreshStats() {
