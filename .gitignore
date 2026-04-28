@@ -4,6 +4,8 @@ terraform.tfstate.backup
 .terraform/
 *.tfvars
 
+lambda/auto_alert/lambda_function.zip
+
 # OS
 .DS_Store
 *.pem

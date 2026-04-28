@@ -56,3 +56,20 @@ module "devops_agent" {
   #   region            = var.region
   agent_space_name = "devops-agent-poc"
 }
+
+# Lambda Module 
+module "lambda" {
+  source           = "./lambda"
+  alert_email      = var.alert_email
+  github_token     = var.github_token
+  github_repo      = var.github_repo
+  devops_agent_url = var.devops_agent_url
+  instance_id      = module.ec2.instance_id
+}
+
+# EventBridge Module 
+module "eventbridge" {
+  source               = "./eventbridge"
+  lambda_function_arn  = module.lambda.lambda_function_arn
+  lambda_function_name = module.lambda.lambda_function_name
+}

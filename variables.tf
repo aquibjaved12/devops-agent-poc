@@ -45,3 +45,26 @@ variable "github_actions_username" {
   type        = string
   default     = "aquib"
 }
+
+variable "alert_email" {
+  description = "Email for SES incident alerts"
+  type        = string
+}
+
+variable "github_token" {
+  description = "GitHub PAT for deployment info"
+  type        = string
+  sensitive   = true
+}
+
+variable "github_repo" {
+  description = "GitHub repo owner/name"
+  type        = string
+  default     = "aquibjaved12/devops-agent-poc"
+}
+
+variable "devops_agent_url" {
+  description = "DevOps Agent Web App URL"
+  type        = string
+  default     = "https://console.aws.amazon.com/devops-agent"
+}
