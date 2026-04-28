@@ -8,6 +8,7 @@ variable "github_token" {
   description = "GitHub Personal Access Token for deployment info"
   type        = string
   sensitive   = true
+  default     = ""
 }
 
 variable "github_repo" {

@@ -49,12 +49,14 @@ variable "github_actions_username" {
 variable "alert_email" {
   description = "Email for SES incident alerts"
   type        = string
+  default     = ""
 }
 
 variable "github_token" {
   description = "GitHub PAT for deployment info"
   type        = string
   sensitive   = true
+  default     = ""
 }
 
 variable "github_repo" {

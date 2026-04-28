@@ -63,9 +63,15 @@ jobs:
 
       - name: Terraform Plan
         run:  terraform plan -out=tfplan
+        env: 
+          TF_VAR_alert_email:  ${{ secrets.ALERT_EMAIL }}
+          TF_VAR_github_token: ${{ secrets.TOKEN_GITHUB }}
 
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
+        env:
+          TF_VAR_alert_email:  ${{ secrets.ALERT_EMAIL }}
+          TF_VAR_github_token: ${{ secrets.TOKEN_GITHUB }}
 
       - name: Capture Outputs
         id: tf_outputs
