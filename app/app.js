@@ -565,19 +565,16 @@ const server = http.createServer((req, res) => {
   else if (req.url === '/crash') {
     stats.error.count++;
     stats.error.lastTriggered = new Date().toISOString();
-    addLog('ERROR', `💥 Fatal error triggered — uncaught exception (crash #${stats.error.count})`);
 
-    // Simulate uncaught exception after response
+    // Log multiple ERROR lines per click — ensures metric filter catches them
+    addLog('ERROR', `💥 DEPLOYMENT BUG: Uncaught exception (error #${stats.error.count})`);
+    addLog('ERROR', `TypeError: Cannot read properties of undefined (reading 'data')`);
+    addLog('ERROR', `  at processRequest (/app/app.js:45:12)`);
+    addLog('ERROR', `  at Server.<anonymous> (/app/app.js:12:3)`);
+    addLog('ERROR', `Stack trace: deployment introduced breaking change in feature branch`);
+
     res.writeHead(500, { 'Content-Type': 'text/plain' });
-    res.end(`Deployment bug #${stats.error.count} — fatal error!`);
-
-    // Throw error after 1 second — simulates bad deployment
-    setTimeout(() => {
-      throw new Error(
-        'DEPLOYMENT BUG: Uncaught exception — ' +
-        'TypeError: Cannot read properties of undefined'
-      );
-    }, 1000);
+    res.end(`Deployment bug #${stats.error.count} — fatal error logged!`);
   }
 
   // ── 404 ──
