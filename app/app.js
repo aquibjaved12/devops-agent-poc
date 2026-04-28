@@ -361,7 +361,7 @@ function getHTML() {
     // ── Trigger incident endpoints ──────────────────────────────
     function trigger(path, btn) {
       const statusEl = document.getElementById('status');
-      const labels = { '/cpu': 'CPU Spike', '/error': 'Error', '/slow': 'Slow Response' };
+      const labels = { '/cpu': 'CPU Spike', '/error': 'Error', '/slow': 'Slow Response', '/crash': 'Deployment Bug' };
       const label  = labels[path];
 
       // Disable button + show spinner
@@ -568,7 +568,7 @@ const server = http.createServer((req, res) => {
     stats.error.lastTriggered = new Date().toISOString();
 
     // Log multiple ERROR lines per click — ensures metric filter catches them
-    addLog('ERROR', `💥 DEPLOYMENT BUG: Uncaught exception (error #${stats.error.count})`);
+    addLog('ERROR', `DEPLOYMENT BUG: Uncaught exception (error #${stats.error.count})`);
     addLog('ERROR', `TypeError: Cannot read properties of undefined (reading 'data')`);
     addLog('ERROR', `  at processRequest (/app/app.js:45:12)`);
     addLog('ERROR', `  at Server.<anonymous> (/app/app.js:12:3)`);
